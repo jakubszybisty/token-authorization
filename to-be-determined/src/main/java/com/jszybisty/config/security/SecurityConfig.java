@@ -1,9 +1,12 @@
 package com.jszybisty.config.security;
 
 import com.jszybisty.config.externalwebservice.ExternalServiceAuthenticator;
+import com.jszybisty.dao.UserRepository;
 import com.jszybisty.rest_api.ApiController;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -21,6 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 @Configuration
 @EnableWebMvcSecurity
 @EnableScheduling
+@ComponentScan("com.jszybisty.dao")
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
@@ -41,8 +45,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 anonymous().disable().
                 exceptionHandling().authenticationEntryPoint(unauthorizedEntryPoint());
 
-        http.addFilterBefore(new AuthenticationFilter(authenticationManager()), BasicAuthenticationFilter.class).
-                addFilterBefore(new ManagementEndpointAuthenticationFilter(authenticationManager()), BasicAuthenticationFilter.class);
+        http.addFilterBefore(new AuthenticationFilter(authenticationManager()), BasicAuthenticationFilter.class);
     }
 
     private String[] actuatorEndpoints() {
@@ -51,12 +54,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 ApiController.METRICS_ENDPOINT, ApiController.SHUTDOWN_ENDPOINT};
     }
 
+//    @Override
+//    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//        auth.authenticationProvider(domainUsernamePasswordAuthenticationProvider()).
+//                authenticationProvider(backendAdminUsernamePasswordAuthenticationProvider()).
+//                authenticationProvider(tokenAuthenticationProvider()).
+//                authenticationProvider(userAuthenticationProvider());
+//    }
+
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.authenticationProvider(domainUsernamePasswordAuthenticationProvider()).
-                authenticationProvider(backendAdminUsernamePasswordAuthenticationProvider()).
-                authenticationProvider(tokenAuthenticationProvider());
+        auth.authenticationProvider(userAuthenticationProvider());
     }
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Bean
     public TokenService tokenService() {
@@ -76,6 +88,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     public AuthenticationProvider backendAdminUsernamePasswordAuthenticationProvider() {
         return new BackendAdminUsernamePasswordAuthenticationProvider();
+    }
+
+    @Bean
+    public AuthenticationProvider userAuthenticationProvider() {
+        return new UserAuthenticationProvider();
     }
 
     @Bean

@@ -9,47 +9,41 @@ import net.sf.ehcache.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 
 import java.util.UUID;
 
+
+@EnableCaching
 public class TokenService {
 
-    @Autowired
-    TokenRepository tokenRepository;
+    private Logger logger = LoggerFactory.getLogger(TokenService.class);
+    private CacheManager cm = new CacheManager("src/main/resources/encache.xml");
+    private Cache cache = (Cache) cm.getEhcache("restApiAuthTokenCache");
 
-    private static final Logger logger = LoggerFactory.getLogger(TokenService.class);
-    private static final Cache restApiAuthTokenCache = CacheManager.getInstance().getCache("restApiAuthTokenCache");
     public static final int HALF_AN_HOUR_IN_MILLISECONDS = 30 * 60 * 1000;
 
-//    @Scheduled(fixedRate = HALF_AN_HOUR_IN_MILLISECONDS)
-//    public void evictExpiredTokens() {
-//        logger.info("Evicting expired tokens");
-//        restApiAuthTokenCache.evictExpiredElements();
-//    }
+    @Scheduled(fixedRate = HALF_AN_HOUR_IN_MILLISECONDS)
+    public void evictExpiredTokens() {
+        logger.info("Evicting expired tokens");
+        cache.evictExpiredElements();
+    }
 
     public String generateNewToken() {
         return UUID.randomUUID().toString();
     }
 
     public void store(String token, Authentication authentication) {
-        //restApiAuthTokenCache.put(new Element(token, authentication));
-        tokenRepository.save(new Token(token, authentication));
+        cache.put(new Element(token, authentication));
     }
 
     public boolean contains(String token) {
-
-        if(tokenRepository.findByToken(token) != null)
-            return true;
-        else
-            return false;
+        return cache.get(token) != null;
     }
 
     public Authentication retrieve(String token) {
-        //return (Authentication) restApiAuthTokenCache.get(token).getObjectValue();
-        Token token2 = tokenRepository.findByToken(token);
-        return token2.getAuthentication();
-
+        return (Authentication) cache.get(token).getObjectValue();
     }
 }
