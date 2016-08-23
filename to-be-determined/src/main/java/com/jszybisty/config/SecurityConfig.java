@@ -1,8 +1,5 @@
-package com.jszybisty.config.security;
+package com.jszybisty.config;
 
-import com.jszybisty.dao.UserRepository;
-import com.jszybisty.rest_api.ApiController;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -24,9 +21,6 @@ import javax.servlet.http.HttpServletResponse;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-
-    private String backendAdminRole = "SUPER";
-
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.
@@ -35,28 +29,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 and().
                 authorizeRequests().
                 antMatchers("/").permitAll().
-                antMatchers(actuatorEndpoints()).hasRole(backendAdminRole).
-                anyRequest().authenticated().
-                and().
-                anonymous().disable().
-                exceptionHandling().authenticationEntryPoint(unauthorizedEntryPoint());
+                antMatchers(("/normal")).hasAnyRole("USER", "ADMIN").
+                antMatchers(("/super")).hasRole("ADMIN").
+                anyRequest().authenticated();
 
-        http.addFilterBefore(new AuthenticationFilter(authenticationManager()), BasicAuthenticationFilter.class);
-    }
-
-    private String[] actuatorEndpoints() {
-        return new String[]{ApiController.AUTOCONFIG_ENDPOINT, ApiController.BEANS_ENDPOINT, ApiController.CONFIGPROPS_ENDPOINT,
-                ApiController.ENV_ENDPOINT, ApiController.MAPPINGS_ENDPOINT,
-                ApiController.METRICS_ENDPOINT, ApiController.SHUTDOWN_ENDPOINT};
+        http.addFilterBefore(new AuthenticationFilter(authenticationManager(), tokenService()), BasicAuthenticationFilter.class);
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.authenticationProvider(userAuthenticationProvider());
+        auth.authenticationProvider(userAuthenticationProvider())
+        .authenticationProvider(tokenAuthenticationProvider());
     }
-
-    @Autowired
-    private UserRepository userRepository;
 
     @Bean
     public TokenService tokenService() {

@@ -1,4 +1,4 @@
-package com.jszybisty.config.security;
+package com.jszybisty.config;
 
 
 import com.google.common.base.Optional;
@@ -26,24 +26,22 @@ public class UserAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        Optional<String> username = (Optional) authentication.getPrincipal();
-        Optional<String> password = (Optional) authentication.getCredentials();
+        String username = authentication.getPrincipal().toString();
+        String password = authentication.getCredentials().toString();
 
-        User user = userRepository.findByLogin(username.get());
+        User user = userRepository.findByLogin(username);
 
-        if (!username.isPresent() || !password.isPresent()) {
+        if (username.isEmpty() || password.isEmpty()) {
             throw new BadCredentialsException("Wrong credentials");
         }
-
         if (user == null) {
-            throw new BadCredentialsException("Wrong credentials");
+            throw new BadCredentialsException("No such user");
         }
 
         List<GrantedAuthority> grantedAuths = new ArrayList<GrantedAuthority>();
-        grantedAuths.add(new SimpleGrantedAuthority("ROLE_USER"));
+        grantedAuths.add(new SimpleGrantedAuthority(String.valueOf(user.getRole())));
 
         authentication = new UsernamePasswordAuthenticationToken(username, null, grantedAuths);
-        //authentication.setAuthenticated(true);
         return authentication;
 
     }

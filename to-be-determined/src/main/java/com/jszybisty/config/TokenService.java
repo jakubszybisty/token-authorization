@@ -1,14 +1,11 @@
-package com.jszybisty.config.security;
+package com.jszybisty.config;
 
 
-import com.jszybisty.dao.TokenRepository;
-import com.jszybisty.model.Token;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;

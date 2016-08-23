@@ -1,4 +1,4 @@
-package com.jszybisty.rest_api;
+package com.jszybisty.api;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;

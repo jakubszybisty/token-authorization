@@ -1,4 +1,4 @@
-package com.jszybisty.rest_api;
+package com.jszybisty.api;
 
 /**
  * Created by Jakub on 8/21/2016.

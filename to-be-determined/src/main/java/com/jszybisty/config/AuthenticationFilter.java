@@ -1,12 +1,12 @@
-package com.jszybisty.config.security;
+package com.jszybisty.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
-import com.jszybisty.rest_api.ApiController;
+import com.jszybisty.api.ApiController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,20 +31,28 @@ public class AuthenticationFilter extends GenericFilterBean {
     private final static Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
     public static final String TOKEN_SESSION_KEY = "token";
     public static final String USER_SESSION_KEY = "user";
+
     private AuthenticationManager authenticationManager;
 
-    public AuthenticationFilter(AuthenticationManager authenticationManager) {
+    private TokenService tokenService;
+
+    @Autowired
+    public AuthenticationFilter(AuthenticationManager authenticationManager, TokenService tokenService) {
         this.authenticationManager = authenticationManager;
+        this.tokenService = tokenService;
     }
+
+
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = asHttp(request);
         HttpServletResponse httpResponse = asHttp(response);
 
-        Optional<String> username = Optional.fromNullable(httpRequest.getHeader("X-Auth-Username"));
-        Optional<String> password = Optional.fromNullable(httpRequest.getHeader("X-Auth-Password"));
-        Optional<String> token = Optional.fromNullable(httpRequest.getHeader("X-Auth-Token"));
+        String username = httpRequest.getHeader("X-Auth-Username");
+        String password = httpRequest.getHeader("X-Auth-Password");
+        String token = httpRequest.getHeader("X-Auth-Token");
+        //if (token.isEmpty()) token = httpRequest.getParameter("token");
 
         String resourcePath = new UrlPathHelper().getPathWithinApplication(httpRequest);
 
@@ -55,7 +63,7 @@ public class AuthenticationFilter extends GenericFilterBean {
                 return;
             }
 
-            if (token.isPresent()) {
+            if (!token.isEmpty()) {
                 logger.debug("Trying to authenticate user by X-Auth-Token method. Token: {}", token);
                 processTokenAuthentication(token);
             }
@@ -104,28 +112,41 @@ public class AuthenticationFilter extends GenericFilterBean {
         return ApiController.AUTHENTICATE_URL.equalsIgnoreCase(resourcePath) && httpRequest.getMethod().equals("POST");
     }
 
-    private void processUsernamePasswordAuthentication(HttpServletResponse httpResponse, Optional<String> username, Optional<String> password) throws IOException {
+    private void processUsernamePasswordAuthentication(HttpServletResponse httpResponse, String username, String password) throws IOException {
         Authentication resultOfAuthentication = tryToAuthenticateWithUsernameAndPassword(username, password);
+        String newToken = tokenService.generateNewToken();
+        tokenService.store(newToken, resultOfAuthentication);
         SecurityContextHolder.getContext().setAuthentication(resultOfAuthentication);
         httpResponse.setStatus(HttpServletResponse.SC_OK);
-        TokenResponse tokenResponse = new TokenResponse(resultOfAuthentication.getDetails().toString());
+//        TokenResponse tokenResponse = new TokenResponse(resultOfAuthentication.getDetails().toString());
+//        String tokenJsonResponse = new ObjectMapper().writeValueAsString(tokenResponse);
+//        httpResponse.addHeader("Content-Type", "application/json");
+//        httpResponse.getWriter().print(tokenJsonResponse);
+//        JSONObject json = new JSONObject();
+//        json.put("token", newToken);
+//        json.put("username", username);
+//        httpResponse.addHeader("Content-Type", "application/json");
+//        json.write(httpResponse.getWriter());
+
+        TokenResponse tokenResponse = new TokenResponse(newToken, username);
         String tokenJsonResponse = new ObjectMapper().writeValueAsString(tokenResponse);
         httpResponse.addHeader("Content-Type", "application/json");
         httpResponse.getWriter().print(tokenJsonResponse);
     }
 
-    private Authentication tryToAuthenticateWithUsernameAndPassword(Optional<String> username, Optional<String> password) {
+    private Authentication tryToAuthenticateWithUsernameAndPassword(String username, String password) {
         UsernamePasswordAuthenticationToken requestAuthentication = new UsernamePasswordAuthenticationToken(username, password);
+        requestAuthentication.setDetails("mock");
         return tryToAuthenticate(requestAuthentication);
     }
 
-    private void processTokenAuthentication(Optional<String> token) {
+    private void processTokenAuthentication(String token) {
         Authentication resultOfAuthentication = tryToAuthenticateWithToken(token);
         SecurityContextHolder.getContext().setAuthentication(resultOfAuthentication);
     }
 
-    private Authentication tryToAuthenticateWithToken(Optional<String> token) {
-        PreAuthenticatedAuthenticationToken requestAuthentication = new PreAuthenticatedAuthenticationToken(token, null);
+    private Authentication tryToAuthenticateWithToken(String token) {
+        PreAuthenticatedAuthenticationToken requestAuthentication = new PreAuthenticatedAuthenticationToken(token, "mock");
         return tryToAuthenticate(requestAuthentication);
     }
 
