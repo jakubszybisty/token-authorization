@@ -10,13 +10,19 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class UserAuthenticationProvider implements AuthenticationProvider {
 
     @Autowired
     private UserRepository userRepository;
+
+    private UsernamePasswordAuthenticationToken authentication = null;
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
@@ -33,7 +39,12 @@ public class UserAuthenticationProvider implements AuthenticationProvider {
             throw new BadCredentialsException("Wrong credentials");
         }
 
-        return new UsernamePasswordAuthenticationToken(username, password);
+        List<GrantedAuthority> grantedAuths = new ArrayList<GrantedAuthority>();
+        grantedAuths.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+        authentication = new UsernamePasswordAuthenticationToken(username, null, grantedAuths);
+        //authentication.setAuthenticated(true);
+        return authentication;
 
     }
 

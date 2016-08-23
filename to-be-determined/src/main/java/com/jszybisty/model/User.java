@@ -22,8 +22,8 @@ public class User implements Serializable {
     private Role role;
 
     private enum Role {
-        NORMAL,
-        SUPER
+        ROLE_USER,
+        ROLE_ADMIN
     }
 
     public User() {
